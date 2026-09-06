@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MAS Client Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --navy:#1B2A41; --navy-light:#28405e;
+    --paper:#F6F5F1; --card:#FFFFFF; --ink:#242A31; --ink-soft:#6B7280; --line:#E4E1D8;
+    --teal:#3E7C6B; --teal-light:#E7F1EE;
+    --amber:#C97B3E; --amber-light:#FBF0E4;
+    --rose:#B4483A; --rose-light:#FBEAE7;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Inter',sans-serif;background:var(--paper);color:var(--ink);min-height:100vh;}
+  h1,h2,h3{font-family:'Lora',serif;margin:0;}
+
+  /* LOGIN */
+  #login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}
+  .login-card{background:var(--card);border:1px solid var(--line);border-radius:6px;width:100%;max-width:380px;padding:40px 36px 36px;}
+  .login-mark{width:48px;height:48px;border-radius:8px;background:var(--navy);display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Lora',serif;font-size:15px;font-weight:600;margin-bottom:20px;}
+  .login-card h1{font-size:22px;color:var(--navy);margin-bottom:6px;}
+  .login-card p.sub{color:var(--ink-soft);font-size:14px;margin:0 0 28px;}
+  .field{margin-bottom:16px;}
+  .field label{display:block;font-size:13px;font-weight:500;color:var(--ink);margin-bottom:6px;}
+  .field input,.field select,.field textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:5px;font-size:14px;font-family:inherit;background:#fff;color:var(--ink);}
+  .field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--navy-light);outline-offset:1px;border-color:var(--navy-light);}
+  .field input[type="file"]{padding:7px 8px;font-size:12.5px;}
+  .btn{border:none;border-radius:5px;padding:10px 16px;font-family:inherit;font-size:13.5px;font-weight:600;cursor:pointer;}
+  .btn-primary{background:var(--navy);color:#fff;width:100%;margin-top:6px;}
+  .btn-primary:hover{background:var(--navy-light);}
+  .login-error{background:var(--rose-light);color:var(--rose);border-radius:5px;padding:9px 12px;font-size:13px;margin-bottom:16px;display:none;}
+  .login-hint{margin-top:20px;font-size:12px;color:var(--ink-soft);border-top:1px solid var(--line);padding-top:16px;}
+
+  /* SHELL */
+  #app{display:none;min-height:100vh;}
+  .shell{display:flex;min-height:100vh;}
+  .sidebar{width:250px;background:var(--navy);color:#fff;flex-shrink:0;padding:20px 14px;overflow-y:auto;display:flex;flex-direction:column;}
+  .brand{display:flex;align-items:center;gap:10px;margin-bottom:22px;padding:0 6px;}
+  .brand .mark{width:36px;height:30px;border-radius:6px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-family:'Lora',serif;font-weight:600;font-size:11px;}
+  .brand span{font-family:'Lora',serif;font-size:15.5px;font-weight:600;}
+  .nav-group{margin-bottom:14px;}
+  .nav-group-label{font-size:10.5px;letter-spacing:0.03em;color:rgba(255,255,255,0.4);padding:6px 12px 4px;font-weight:600;}
+  .nav-item{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:6px;font-size:13px;color:rgba(255,255,255,0.78);cursor:pointer;margin-bottom:1px;}
+  .nav-item:hover{background:rgba(255,255,255,0.06);}
+  .nav-item.active{background:rgba(255,255,255,0.14);color:#fff;font-weight:600;}
+  .nav-count{background:var(--amber);color:#fff;font-size:10.5px;font-weight:700;border-radius:20px;padding:1px 7px;}
+  .sidebar-footer{margin-top:auto;padding-top:14px;border-top:1px solid rgba(255,255,255,0.14);font-size:12px;color:rgba(255,255,255,0.55);}
+  .logout-link{color:rgba(255,255,255,0.75);cursor:pointer;text-decoration:underline;}
+
+  .main{flex:1;padding:30px 38px;max-width:1080px;}
+  .main-header{margin-bottom:22px;}
+  .main-header h1{font-size:23px;color:var(--navy);}
+  .main-header p{color:var(--ink-soft);font-size:13.5px;margin-top:4px;}
+  .view{display:none;}
+  .view.active{display:block;}
+
+  /* Home / dashboard */
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:26px;}
+  .stat-card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px 18px;}
+  .stat-card .num{font-family:'Lora',serif;font-size:26px;color:var(--navy);}
+  .stat-card .label{font-size:12.5px;color:var(--ink-soft);margin-top:2px;}
+  .action-item{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--amber);border-radius:6px;padding:13px 16px;margin-bottom:9px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;}
+  .action-item:hover{border-color:var(--navy-light);}
+  .action-text{font-size:13.5px;font-weight:500;}
+  .action-sub{font-size:12px;color:var(--ink-soft);margin-top:2px;}
+  .action-go{font-size:12.5px;color:var(--navy);font-weight:600;}
+  .section-title{font-size:15px;font-family:'Lora',serif;color:var(--navy);margin:26px 0 12px;}
+
+  /* Tables */
+  .data-table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+  .data-table th{text-align:left;font-size:11.5px;color:var(--ink-soft);font-weight:600;padding:10px 14px;background:var(--paper);border-bottom:1px solid var(--line);}
+  .data-table td{padding:11px 14px;font-size:13.5px;border-bottom:1px solid var(--line);}
+  .data-table tr:last-child td{border-bottom:none;}
+  .data-table tr.clickable{cursor:pointer;}
+  .data-table tr.clickable:hover{background:var(--paper);}
+  .badge{font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;white-space:nowrap;}
+  .badge-teal{background:var(--teal-light);color:var(--teal);}
+  .badge-amber{background:var(--amber-light);color:var(--amber);}
+  .badge-rose{background:var(--rose-light);color:var(--rose);}
+  .empty-note{color:var(--ink-soft);font-size:13.5px;padding:26px 0;text-align:center;border:1px dashed var(--line);border-radius:8px;}
+  .link-btn{background:none;border:none;color:var(--navy);font-weight:600;font-size:12.5px;cursor:pointer;padding:0;text-decoration:underline;}
+  .link-btn.rose{color:var(--rose);}
+  .table-toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;}
+  .tab-row{display:flex;gap:8px;}
+  .tab-btn{border:1px solid var(--line);background:#fff;padding:7px 14px;border-radius:6px;font-size:12.5px;font-family:inherit;cursor:pointer;color:var(--ink-soft);}
+  .tab-btn.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+
+  /* Form cards */
+  .form-card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:22px;margin-bottom:24px;}
+  .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;}
+  .form-grid .field{margin-bottom:0;}
+  .form-note{font-size:12.5px;color:var(--teal);background:var(--teal-light);padding:8px 12px;border-radius:6px;margin-top:12px;display:none;}
+  .form-note.error{color:var(--rose);background:var(--rose-light);}
+
+  /* Modal */
+  .overlay{display:none;position:fixed;inset:0;background:rgba(27,42,65,0.45);align-items:center;justify-content:center;z-index:50;padding:20px;}
+  .modal{background:#fff;border-radius:10px;max-width:480px;width:100%;padding:28px 30px;max-height:88vh;overflow-y:auto;}
+  .modal-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;}
+  .modal-head h2{font-size:18px;color:var(--navy);}
+  .modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink-soft);line-height:1;}
+  .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px 16px;margin-bottom:16px;}
+  .detail-item .k{font-size:11px;color:var(--ink-soft);margin-bottom:3px;}
+  .detail-item .v{font-size:13.5px;font-weight:500;}
+  .stage-track{display:flex;gap:6px;margin-bottom:18px;}
+  .stage-dot{flex:1;text-align:center;font-size:11px;font-weight:600;padding:7px 4px;border-radius:5px;background:var(--paper);color:var(--ink-soft);border:1px solid var(--line);}
+  .stage-dot.done{background:var(--teal-light);color:var(--teal);border-color:transparent;}
+  .stage-dot.current{background:var(--amber-light);color:var(--amber);border-color:transparent;}
+  .stage-dot.failed{background:var(--rose-light);color:var(--rose);border-color:transparent;}
+  .doc-row{display:flex;justify-content:space-between;align-items:center;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:9px 12px;margin-bottom:7px;font-size:13px;}
+  .modal-actions{display:flex;gap:10px;margin-top:6px;flex-wrap:wrap;}
+  .btn-approve{background:var(--teal);color:#fff;flex:1;}
+  .btn-approve:hover{background:#336a5b;}
+  .btn-reject{background:#fff;color:var(--rose);border:1px solid var(--rose-light);flex:1;}
+  .btn-reject:hover{background:var(--rose-light);}
+  .btn-neutral{background:#fff;color:var(--ink);border:1px solid var(--line);flex:1;}
+  .btn-neutral:hover{border-color:var(--navy-light);}
+  .decided-note{text-align:center;font-size:13px;font-weight:600;padding:9px;border-radius:6px;}
+
+  .info-panel{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:24px;}
+  .info-panel p{font-size:13.5px;line-height:1.7;color:var(--ink);margin:0 0 12px;}
+  .service-pill{display:inline-block;background:var(--teal-light);color:var(--teal);font-size:12px;font-weight:600;padding:5px 12px;border-radius:20px;margin:0 8px 8px 0;}
+  .live-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--teal);margin-right:6px;animation:pulse 1.6s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
+
+  textarea{min-height:90px;resize:vertical;}
+
+  @media (max-width:760px){
+    .shell{flex-direction:column;}
+    .sidebar{width:100%;flex-direction:column;max-height:none;}
+    .main{padding:20px 16px;}
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-mark">MAS</div>
+    <h1>MAS Client Portal</h1>
+    <p class="sub">Sign in to manage onboarding, HR, documents, and finance.</p>
+    <div class="login-error" id="login-error">Incorrect username or password.</div>
+    <div class="field"><label for="username">Username</label><input type="text" id="username" placeholder="Enter your username"></div>
+    <div class="field"><label for="password">Password</label><input type="password" id="password" placeholder="Enter your password"></div>
+    <button class="btn btn-primary" onclick="attemptLogin()">Sign in</button>
+    <div class="login-hint">Demo credentials — username: <strong>admin</strong>, password: <strong>admin123</strong></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="shell">
+    <div class="sidebar">
+      <div class="brand"><div class="mark">MAS</div><span>Client Portal</span></div>
+
+      <div class="nav-group">
+        <div class="nav-item active" onclick="showView('home')" data-view="home">Home</div>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-label">ONBOARDING</div>
+        <div class="nav-item" onclick="showView('newOnboarding')" data-view="newOnboarding">New Onboarding</div>
+        <div class="nav-item" onclick="showView('inProgressOnboarding')" data-view="inProgressOnboarding">
+          <span>In-Progress Onboarding</span><span class="nav-count" id="count-onboarding">0</span>
+        </div>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-label">OPERATIONS & HR</div>
+        <div class="nav-item" onclick="showView('tickets')" data-view="tickets">
+          <span>Ticketing System</span><span class="nav-count" id="count-tickets">0</span>
+        </div>
+        <div class="nav-item" onclick="showView('headcount')" data-view="headcount">Employee Headcount</div>
+        <div class="nav-item" onclick="showView('exitReentry')" data-view="exitReentry">Exit & Re-entry</div>
+        <div class="nav-item" onclick="showView('hrLetters')" data-view="hrLetters">HR Letters</div>
+        <div class="nav-item" onclick="showView('renewals')" data-view="renewals">
+          <span>Renewals</span><span class="nav-count" id="count-renewals">0</span>
+        </div>
+        <div class="nav-item" onclick="showView('annualLeave')" data-view="annualLeave">Annual Leave Records</div>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-label">DOCUMENTS & FINANCE</div>
+        <div class="nav-item" onclick="showView('commercial')" data-view="commercial">Commercial Documents</div>
+        <div class="nav-item" onclick="showView('invoices')" data-view="invoices">Invoicing</div>
+        <div class="nav-item" onclick="showView('soa')" data-view="soa">SOA</div>
+        <div class="nav-item" onclick="showView('overdue')" data-view="overdue">Overdue Invoices</div>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-label">INSIGHTS</div>
+        <div class="nav-item" onclick="showView('reports')" data-view="reports">Reports (Excel)</div>
+        <div class="nav-item" onclick="showView('profile')" data-view="profile">Proven Profile & Services</div>
+        <div class="nav-item" onclick="showView('newsletter')" data-view="newsletter">Newsletter</div>
+        <div class="nav-item" onclick="showView('suggestions')" data-view="suggestions">Suggestion Box</div>
+      </div>
+
+      <div class="sidebar-footer">
+        Signed in as <strong>admin</strong><br>
+        <span class="logout-link" onclick="logout()">Sign out</span>
+      </div>
+    </div>
+
+    <div class="main">
+
+      <!-- HOME -->
+      <div class="view active" id="view-home">
+        <div class="main-header"><h1>Welcome back</h1><p>Here's what needs your attention today.</p></div>
+        <div class="stat-grid" id="home-stats"></div>
+        <div class="section-title">Action required</div>
+        <div id="action-list"></div>
+      </div>
+
+      <!-- NEW ONBOARDING -->
+      <div class="view" id="view-newOnboarding">
+        <div class="main-header"><h1>New Onboarding</h1><p>Start an initial assessment for a new employee request.</p></div>
+        <div class="form-card">
+          <div class="form-grid">
+            <div class="field"><label>Client company</label><input type="text" id="ob-company" placeholder="e.g. Falcon Logistics"></div>
+            <div class="field"><label>Employee name</label><input type="text" id="ob-employee" placeholder="e.g. Ahmed Saleh"></div>
+            <div class="field"><label>Request type</label>
+              <select id="ob-type">
+                <option value="Block Visa">Block Visa</option>
+                <option value="Transfer of Sponsorship">Transfer of Sponsorship</option>
+              </select>
+            </div>
+            <div class="field"><label>Supporting documents</label><input type="file" id="ob-docs" multiple></div>
+          </div>
+          <div class="modal-actions" style="margin-top:16px;">
+            <button class="btn btn-approve" style="flex:0 0 auto;" onclick="submitOnboarding()">Submit for query stage</button>
+          </div>
+          <div class="form-note" id="ob-note"></div>
+        </div>
+      </div>
+
+      <!-- IN-PROGRESS ONBOARDING -->
+      <div class="view" id="view-inProgressOnboarding">
+        <div class="main-header"><h1>In-Progress Onboarding</h1><p>Track each request through query, assessment, and closing.</p></div>
+        <div class="table-toolbar">
+          <div class="tab-row">
+            <button class="tab-btn active" id="ob-tab-progress" onclick="setOnboardingTab('progress')">In progress</button>
+            <button class="tab-btn" id="ob-tab-done" onclick="setOnboardingTab('done')">Completed / Rejected</button>
+          </div>
+        </div>
+        <div id="onboarding-table"></div>
+      </div>
+
+      <!-- TICKETS -->
+      <div class="view" id="view-tickets">
+        <div class="main-header"><h1>Ticketing System</h1><p>Operational and escalation points of contact for open issues.</p></div>
+        <div class="form-card">
+          <div class="form-grid">
+            <div class="field"><label>Subject</label><input type="text" id="tk-subject" placeholder="e.g. Missing iqama copy"></div>
+            <div class="field"><label>Operational POC (KAM)</label><input type="text" id="tk-kam" placeholder="Key Account Manager name"></div>
+            <div class="field"><label>Escalation POC</label><input type="text" id="tk-esc" placeholder="Head of KAM / CRM"></div>
+          </div>
+          <div class="modal-actions" style="margin-top:16px;"><button class="btn btn-approve" style="flex:0 0 auto;" onclick="submitTicket()">Open ticket</button></div>
+          <div class="form-note" id="tk-note"></div>
+        </div>
+        <div class="table-toolbar">
+          <div class="tab-row">
+            <button class="tab-btn active" id="tk-tab-open" onclick="setTicketTab('open')">Open</button>
+            <button class="tab-btn" id="tk-tab-closed" onclick="setTicketTab('closed')">Closed</button>
+          </div>
+        </div>
+        <div id="tickets-table"></div>
+      </div>
+
+      <!-- HEADCOUNT -->
+      <div class="view" id="view-headcount">
+        <div class="main-header"><h1>Employee Headcount</h1><p>Overall workforce view. Click an employee for their full profile.</p></div>
+        <div id="headcount-table"></div>
+      </div>
+
+      <!-- EXIT REENTRY -->
+      <div class="view" id="view-exitReentry">
+        <div class="main-header"><h1>Exit & Re-entry</h1><p>Active visa records and expiry tracking.</p></div>
+        <div class="form-card">
+          <div class="form-grid">
+            <div class="field"><label>Employee name</label><input type="text" id="er-name"></div>
+            <div class="field"><label>Record type</label>
+              <select id="er-type"><option>Exit</option><option>Re-entry</option></select>
+            </div>
+            <div class="field"><label>Expiry date</label><input type="date" id="er-expiry"></div>
+          </div>
+          <div class="modal-actions" style="margin-top:16px;"><button class="btn btn-approve" style="flex:0 0 auto;" onclick="submitExitReentry()">Add record</button></div>
+          <div class="form-note" id="er-note"></div>
+        </div>
+        <div id="exit-table"></div>
+      </div>
+
+      <!-- HR LETTERS -->
+      <div class="view" id="view-hrLetters">
+        <div class="main-header"><h1>HR Letters</h1><p>Loan, bank, and school letters requested on behalf of employees.</p></div>
+        <div class="form-card">
+          <div class="form-grid">
+            <div class="field"><label>Employee name</label><input type="text" id="hl-name"></div>
+            <div class="field"><label>Letter type</label>
+              <select id="hl-type"><option>Bank Letter</option><option>Loan Letter</option><option>School Letter</option></select>
+            </div>
+          </div>
+          <div class="modal-actions" style="margin-top:16px;"><button class="btn btn-approve" style="flex:0 0 auto;" onclick="submitLetter()">Request letter</button></div>
+          <div class="form-note" id="hl-note"></div>
+        </div>
+        <div id="letters-table"></div>
+      </div>
+
+      <!-- RENEWALS -->
+      <div class="view" id="view-renewals">
+        <div class="main-header"><h1>Renewals</h1><p>Probation period and contract renewals awaiting client acceptance.</p></div>
+        <div id="renewals-table"></div>
+      </div>
+
+      <!-- ANNUAL LEAVE -->
+      <div class="view" id="view-annualLeave">
+        <div class="main-header"><h1>Annual Leave Records</h1><p>Leave taken and remaining balance per employee.</p></div>
+        <div id="leave-table"></div>
+      </div>
+
+      <!-- COMMERCIAL DOCS -->
+      <div class="view" id="view-commercial">
+        <div class="main-header"><h1>Commercial Documents</h1><p>MSA, quotations, and purchase orders on file.</p></div>
+        <div class="form-card">
+          <div class="form-grid">
+            <div class="field"><label>Document type</label>
+              <select id="cd-type"><option>MSA</option><option>Quotation</option><option>PO</option></select>
+            </div>
+            <div class="field"><label>Reference name</label><input type="text" id="cd-name" placeholder="e.g. Q-2026-014"></div>
+            <div class="field"><label>File</label><input type="file" id="cd-file"></div>
+          </div>
+          <div class="modal-actions" style="margin-top:16px;"><button class="btn btn-approve" style="flex:0 0 auto;" onclick="submitCommercialDoc()">Upload document</button></div>
+          <div class="form-note" id="cd-note"></div>
+        </div>
+        <div id="commercial-table"></div>
+      </div>
+
+      <!-- INVOICES -->
+      <div class="view" id="view-invoices">
+        <div class="main-header"><h1>Invoicing</h1><p>Full invoice history, current and previous.</p></div>
+        <div id="invoices-table"></div>
+      </div>
+
+      <!-- SOA -->
+      <div class="view" id="view-soa">
+        <div class="main-header"><h1>Statement of Account (SOA)</h1><p>Download the latest consolidated statement.</p></div>
+        <div class="info-panel">
+          <p>The statement of account reflects all invoiced and outstanding balances as of today.</p>
+          <button class="btn btn-approve" style="flex:0 0 auto;" onclick="downloadSOA()">Download latest SOA</button>
+        </div>
+      </div>
+
+      <!-- OVERDUE -->
+      <div class="view" id="view-overdue">
+        <div class="main-header"><h1>Overdue Invoices</h1><p>Invoices past their due date requiring follow-up.</p></div>
+        <div id="overdue-table"></div>
+      </div>
+
+      <!-- REPORTS -->
+      <div class="view" id="view-reports">
+        <div class="main-header"><h1>Reports</h1><p>Live tracking across ERE (Exit/Re-entry), PP (Probation Period), and iqama expiry.</p></div>
+        <div class="modal-actions" style="margin-bottom:16px;">
+          <button class="btn btn-approve" style="flex:0 0 auto;" onclick="exportReportExcel()">Download as Excel</button>
+        </div>
+        <div id="reports-table"></div>
+      </div>
+
+      <!-- PROFILE -->
+      <div class="view" id="view-profile">
+        <div class="main-header"><h1>Proven Profile & Services</h1><p><span class="live-dot"></span>Live overview of active services with this client.</p></div>
+        <div class="info-panel">
+          <p>MAS currently supports the following service lines for your account:</p>
+          <div>
+            <span class="service-pill">Manpower Outsourcing</span>
+            <span class="service-pill">Visa & Sponsorship</span>
+            <span class="service-pill">Payroll Management</span>
+            <span class="service-pill">HR Advisory</span>
+            <span class="service-pill">Government Relations (GRD)</span>
+          </div>
+          <p style="margin-top:16px;">Last synced: <strong id="profile-clock"></strong></p>
+        </div>
+      </div>
+
+      <!-- NEWSLETTER -->
+      <div class="view" id="view-newsletter">
+        <div class="main-header"><h1>Newsletter</h1><p>Past issues shared with your account.</p></div>
+        <div id="newsletter-table"></div>
+      </div>
+
+      <!-- SUGGESTIONS -->
+      <div class="view" id="view-suggestions">
+        <div class="main-header"><h1>Suggestion Box</h1><p>Share feedback or ideas directly with the MAS account team.</p></div>
+        <div class="form-card">
+          <div class="field"><label>Your suggestion</label><textarea id="sg-text" placeholder="Tell us what could be better..."></textarea></div>
+          <div class="modal-actions" style="margin-top:6px;"><button class="btn btn-approve" style="flex:0 0 auto;" onclick="submitSuggestion()">Submit suggestion</button></div>
+          <div class="form-note" id="sg-note"></div>
+        </div>
+        <div id="suggestions-list"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay"><div class="modal" id="modal-content"></div></div>
+
+<script>
+/* ================= AUTH ================= */
+function attemptLogin(){
+  const u = document.getElementById('username').value.trim();
+  const p = document.getElementById('password').value;
+  const err = document.getElementById('login-error');
+  if(u === 'admin' && p === 'admin123'){
+    err.style.display = 'none';
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    renderAll();
+  } else { err.style.display = 'block'; }
+}
+document.getElementById('password').addEventListener('keydown', e => { if(e.key==='Enter') attemptLogin(); });
+function logout(){
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('username').value = '';
+  document.getElementById('password').value = '';
+}
+
+/* ================= HELPERS ================= */
+function badge(status){
+  const s = (status||'').toLowerCase();
+  if(['approved','accepted','issued','paid','completed','yes','active','closed'].includes(s)) return `<span class="badge badge-teal">${status}</span>`;
+  if(['rejected','overdue','no','inactive'].includes(s)) return `<span class="badge badge-rose">${status}</span>`;
+  return `<span class="badge badge-amber">${status}</span>`;
+}
+function esc(s){ return (s||'').toString().replace(/</g,'&lt;'); }
+function readFileAsDataURL(file){
+  return new Promise((resolve,reject)=>{ const r=new FileReader(); r.onload=()=>resolve(r.result); r.onerror=reject; r.readAsDataURL(file); });
+}
+function downloadDataUrl(fileName, dataUrl){
+  const a=document.createElement('a'); a.href=dataUrl; a.download=fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+function downloadText(fileName, text){
+  const blob=new Blob([text],{type:'text/plain'}); const url=URL.createObjectURL(blob);
+  downloadDataUrl(fileName, url); URL.revokeObjectURL(url);
+}
+function closeModal(){ document.getElementById('overlay').style.display='none'; }
+document.getElementById('overlay').addEventListener('click', function(e){ if(e.target===this) closeModal(); });
+
+/* ================= DATA ================= */
+let idSeq = 1;
+const nextId = p => p + (idSeq++);
+
+let onboarding = [
+  { id:'OB-1', company:'Falcon Logistics', employee:'Ahmed Saleh', type:'Block Visa', docs:[], stage:'query', assessment:null },
+  { id:'OB-2', company:'Nour Retail Group', employee:'Huda Marzouq', type:'Transfer of Sponsorship', docs:[], stage:'assessment', assessment:null },
+  { id:'OB-3', company:'Falcon Logistics', employee:'Bilal Nasser', type:'Block Visa', docs:[], stage:'closing', assessment:'yes' }
+];
+
+let tickets = [
+  { id:'TK-1', subject:'Missing iqama copy for new hire', kam:'Layla Fahmy', esc:'Head of KAM Dept.', status:'open' },
+  { id:'TK-2', subject:'Payroll date confirmation', kam:'Omar Rasheed', esc:'Head of CRM Dept.', status:'closed' }
+];
+
+let employees = [
+  { id:'EMP-01', name:'Ahmed Saleh', salary:'SAR 6,200', insurance:'Class A', iqamaExpiry:'2027-01-15', status:'Active', probationEnd:'2026-11-01', contractEnd:'2027-09-01', leaveTaken:6, leaveBalance:15 },
+  { id:'EMP-02', name:'Huda Marzouq', salary:'SAR 5,400', insurance:'Class B', iqamaExpiry:'2026-10-02', status:'Active', probationEnd:'2026-09-20', contractEnd:'2027-03-15', leaveTaken:11, leaveBalance:10 },
+  { id:'EMP-03', name:'Bilal Nasser', salary:'SAR 7,800', insurance:'Class A', iqamaExpiry:'2026-12-30', status:'Active', probationEnd:'2026-09-15', contractEnd:'2027-06-01', leaveTaken:3, leaveBalance:18 }
+];
+
+let exitReentry = [
+  { id:'ER-1', employee:'Ahmed Saleh', type:'Exit', status:'active', expiry:'2026-10-05' },
+  { id:'ER-2', employee:'Bilal Nasser', type:'Re-entry', status:'inactive', expiry:'2026-08-20' }
+];
+
+let hrLetters = [
+  { id:'HL-1', employee:'Huda Marzouq', type:'Bank Letter', status:'issued' },
+  { id:'HL-2', employee:'Ahmed Saleh', type:'Loan Letter', status:'pending' }
+];
+
+let renewals = [
+  { id:'RN-1', employee:'Huda Marzouq', type:'Probation', due:'2026-09-20', decision:'pending' },
+  { id:'RN-2', employee:'Bilal Nasser', type:'Contract', due:'2027-06-01', decision:'pending' }
+];
+
+let commercialDocs = [
+  { id:'CD-1', type:'MSA', name:'MSA-2025-Falcon', date:'2025-11-02', fileName:'MSA-2025-Falcon.pdf', fileData:null },
+  { id:'CD-2', type:'Quotation', name:'Q-2026-014', date:'2026-08-10', fileName:'Q-2026-014.pdf', fileData:null }
+];
+
+let invoices = [
+  { id:'INV-1042', date:'2026-08-01', amount:'SAR 42,000', status:'paid' },
+  { id:'INV-1051', date:'2026-09-01', amount:'SAR 44,500', status:'current' },
+  { id:'INV-0998', date:'2026-06-01', amount:'SAR 39,200', status:'overdue' }
+];
+
+let newsletters = [
+  { id:'NL-1', title:'Q3 2026 MAS Client Update', date:'2026-07-15' },
+  { id:'NL-2', title:'Iqama Renewal Season Reminders', date:'2026-08-20' }
+];
+
+let suggestions = [];
+
+/* ================= NAV ================= */
+function showView(view){
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.view === view));
+  document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+  document.getElementById('view-' + view).classList.add('active');
+  const renderers = {
+    home: renderHome, inProgressOnboarding: renderOnboardingTable, tickets: renderTicketsTable,
+    headcount: renderHeadcountTable, exitReentry: renderExitTable, hrLetters: renderLettersTable,
+    renewals: renderRenewalsTable, annualLeave: renderLeaveTable, commercial: renderCommercialTable,
+    invoices: renderInvoicesTable, overdue: renderOverdueTable, reports: renderReportsTable,
+    newsletter: renderNewsletterTable, suggestions: renderSuggestionsList
+  };
+  if(renderers[view]) renderers[view]();
+}
+
+function renderAll(){
+  renderHome();
+  updateSidebarCounts();
+  if(!renderAll._clockStarted){
+    renderAll._clockStarted = true;
+    setInterval(()=>{ const el=document.getElementById('profile-clock'); if(el) el.textContent = new Date().toLocaleString(); }, 1000);
+  }
+}
+
+function updateSidebarCounts(){
+  document.getElementById('count-onboarding').textContent = onboarding.filter(o=>['query','assessment','closing'].includes(o.stage)).length;
+  document.getElementById('count-tickets').textContent = tickets.filter(t=>t.status==='open').length;
+  document.getElementById('count-renewals').textContent = renewals.filter(r=>r.decision==='pending').length;
+}
+
+/* ================= HOME ================= */
+function renderHome(){
+  updateSidebarCounts();
+  const stats = [
+    { num: onboarding.filter(o=>['query','assessment','closing'].includes(o.stage)).length, label:'Onboarding in progress' },
+    { num: tickets.filter(t=>t.status==='open').length, label:'Open tickets' },
+    { num: renewals.filter(r=>r.decision==='pending').length, label:'Renewals pending' },
+    { num: invoices.filter(i=>i.status==='overdue').length, label:'Overdue invoices' }
+  ];
+  document.getElementById('home-stats').innerHTML = stats.map(s=>`
+    <div class="stat-card"><div class="num">${s.num}</div><div class="label">${s.label}</div></div>
+  `).join('');
+
+  const actions = [];
+  renewals.filter(r=>r.type==='Contract' && r.decision==='pending').forEach(r=>
+    actions.push({ text:`Approve contract renewal — ${r.employee}`, sub:`Due ${r.due}`, view:'renewals' }));
+  onboarding.filter(o=>o.stage==='query' && o.docs.length===0).forEach(o=>
+    actions.push({ text:`Provide missing documents — ${o.employee}`, sub:`${o.company} · ${o.type}`, view:'newOnboarding' }));
+  renewals.filter(r=>r.type==='Probation' && r.decision==='pending').forEach(r=>
+    actions.push({ text:`Approve probation renewal — ${r.employee}`, sub:`Due ${r.due}`, view:'renewals' }));
+  const openT = tickets.filter(t=>t.status==='open').length, closedT = tickets.filter(t=>t.status==='closed').length;
+  actions.push({ text:`${openT} open / ${closedT} closed tickets`, sub:'Ticketing system', view:'tickets' });
+
+  document.getElementById('action-list').innerHTML = actions.length ? actions.map(a=>`
+    <div class="action-item" onclick="showView('${a.view}')">
+      <div><div class="action-text">${esc(a.text)}</div><div class="action-sub">${esc(a.sub)}</div></div>
+      <div class="action-go">View →</div>
+    </div>`).join('') : '<div class="empty-note">Nothing pending right now.</div>';
+}
+
+/* ================= ONBOARDING ================= */
+document.getElementById('view-newOnboarding'); // no-op anchor
+async function submitOnboarding(){
+  const company = document.getElementById('ob-company').value.trim();
+  const employee = document.getElementById('ob-employee').value.trim();
+  const type = document.getElementById('ob-type').value;
+  const files = document.getElementById('ob-docs').files;
+  const note = document.getElementById('ob-note');
+  if(!company || !employee){
+    note.textContent = 'Enter the client company and employee name.'; note.className='form-note error'; note.style.display='block'; return;
+  }
+  const docs = [];
+  for(const f of files){ docs.push({ name:f.name, data: await readFileAsDataURL(f) }); }
+  onboarding.push({ id: nextId('OB-'), company, employee, type, docs, stage:'query', assessment:null });
+  note.textContent = 'Onboarding request submitted for query stage.'; note.className='form-note'; note.style.display='block';
+  document.getElementById('ob-company').value=''; document.getElementById('ob-employee').value=''; document.getElementById('ob-docs').value='';
+  updateSidebarCounts();
+  setTimeout(()=>{ note.style.display='none'; }, 3500);
+}
+
+let onboardingTab = 'progress';
+function setOnboardingTab(tab){
+  onboardingTab = tab;
+  document.getElementById('ob-tab-progress').classList.toggle('active', tab==='progress');
+  document.getElementById('ob-tab-done').classList.toggle('active', tab==='done');
+  renderOnboardingTable();
+}
+function renderOnboardingTable(){
+  const inProgress = ['query','assessment','closing'];
+  const rows = onboarding.filter(o => onboardingTab==='progress' ? inProgress.includes(o.stage) : !inProgress.includes(o.stage));
+  const el = document.getElementById('onboarding-table');
+  if(rows.length===0){ el.innerHTML = '<div class="empty-note">Nothing here yet.</div>'; return; }
+  const stageLabel = { query:'Query stage', assessment:'Step 1 · Assessment', closing:'Step 2 · Closing', completed:'Completed', rejected:'Rejected' };
+  el.innerHTML = `<table class="data-table"><thead><tr><th>Client</th><th>Employee</th><th>Type</th><th>Documents</th><th>Stage</th></tr></thead><tbody>
+    ${rows.map(o=>`
+      <tr class="clickable" onclick="openOnboarding('${o.id}')">
+        <td>${esc(o.company)}</td><td>${esc(o.employee)}</td><td>${esc(o.type)}</td>
+        <td>${o.docs.length}</td><td>${badge(stageLabel[o.stage])}</td>
+      </tr>`).join('')}
+  </tbody></table>`;
+}
+function openOnboarding(id){
+  const o = onboarding.find(x=>x.id===id); if(!o) return;
+  const stages = ['query','assessment','closing','completed'];
+  const stageLabels = { query:'Query', assessment:'Assessment', closing:'Closing', completed:'Done' };
+  let stageTrack = stages.map(s=>{
+    let cls = 'stage-dot';
+    if(o.stage==='rejected'){ cls += s==='assessment' ? ' failed' : (stages.indexOf(s) < stages.indexOf('assessment') ? ' done' : ''); }
+    else if(stages.indexOf(s) < stages.indexOf(o.stage)) cls += ' done';
+    else if(s === o.stage) cls += ' current';
+    return `<div class="${cls}">${stageLabels[s]}</div>`;
+  }).join('');
+
+  const docsHtml = o.docs.length ? o.docs.map((d,i)=>`
+    <div class="doc-row"><span>${esc(d.name)}</span><button class="link-btn" onclick="downloadDataUrl('${esc(d.name)}', onboarding.find(x=>x.id==='${o.id}').docs[${i}].data)">Download</button></div>
+  `).join('') : '<div class="doc-row"><em style="color:var(--ink-soft);">No documents uploaded yet</em></div>';
+
+  let actionsHtml = '';
+  if(o.stage==='query'){
+    actionsHtml = `<div class="modal-actions"><button class="btn btn-approve" onclick="advanceOnboarding('${o.id}','assessment')">Proceed to Assessment (Step 1)</button></div>`;
+  } else if(o.stage==='assessment'){
+    actionsHtml = `<p style="font-size:13px;color:var(--ink-soft);margin-bottom:10px;">GRD assessment outcome:</p>
+      <div class="modal-actions">
+        <button class="btn btn-approve" onclick="setAssessment('${o.id}','yes')">Yes</button>
+        <button class="btn btn-reject" onclick="setAssessment('${o.id}','no')">No</button>
+      </div>`;
+  } else if(o.stage==='closing'){
+    actionsHtml = `<div class="modal-actions"><button class="btn btn-approve" onclick="confirmOnboarding('${o.id}')">CRM Confirm & Notify Client</button></div>`;
+  } else if(o.stage==='completed'){
+    actionsHtml = `<div class="decided-note" style="background:var(--teal-light);color:var(--teal);">Onboarding completed — client notified.</div>`;
+  } else if(o.stage==='rejected'){
+    actionsHtml = `<div class="decided-note" style="background:var(--rose-light);color:var(--rose);">Rejected at the assessment stage.</div>`;
+  }
+
+  document.getElementById('modal-content').innerHTML = `
+    <div class="modal-head"><h2>${esc(o.employee)}</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="detail-grid">
+      <div class="detail-item"><div class="k">Client company</div><div class="v">${esc(o.company)}</div></div>
+      <div class="detail-item"><div class="k">Request type</div><div class="v">${esc(o.type)}</div></div>
+    </div>
+    <div class="stage-track">${stageTrack}</div>
+    <div class="section-title" style="margin:0 0 8px;font-size:13px;">Documents</div>
+    ${docsHtml}
+    <div style="margin-top:16px;">${actionsHtml}</div>
+  `;
+  document.getElementById('overlay').style.display='flex';
+}
+function advanceOnboarding(id, stage){ const o=onboarding.find(x=>x.id===id); if(!o) return; o.stage=stage; renderOnboardingTable(); updateSidebarCounts(); openOnboarding(id); }
+function setAssessment(id, result){ const o=onboarding.find(x=>x.id===id); if(!o) return; o.assessment=result; o.stage = result==='yes' ? 'closing' : 'rejected'; renderOnboardingTable(); updateSidebarCounts(); openOnboarding(id); }
+function confirmOnboarding(id){ const o=onboarding.find(x=>x.id===id); if(!o) return; o.stage='completed'; renderOnboardingTable(); updateSidebarCounts(); openOnboarding(id); }
+
+/* ================= TICKETS ================= */
+function submitTicket(){
+  const subject = document.getElementById('tk-subject').value.trim();
+  const kam = document.getElementById('tk-kam').value.trim();
+  const esc_ = document.getElementById('tk-esc').value.trim();
+  const note = document.getElementById('tk-note');
+  if(!subject){ note.textContent='Enter a subject for the ticket.'; note.className='form-note error'; note.style.display='block'; return; }
+  tickets.push({ id: nextId('TK-'), subject, kam: kam || '—', esc: esc_ || '—', status:'open' });
+  note.textContent='Ticket opened.'; note.className='form-note'; note.style.display='block';
+  document.getElementById('tk-subject').value=''; document.getElementById('tk-kam').value=''; document.getElementById('tk-esc').value='';
+  renderTicketsTable(); updateSidebarCounts();
+  setTimeout(()=>{ note.style.display='none'; }, 3000);
+}
+let ticketTab = 'open';
+function setTicketTab(tab){ ticketTab=tab; document.getElementById('tk-tab-open').classList.toggle('active',tab==='open'); document.getElementById('tk-tab-closed').classList.toggle('active',tab==='closed'); renderTicketsTable(); }
+function renderTicketsTable(){
+  const rows = tickets.filter(t=>t.status===ticketTab);
+  const el = document.getElementById('tickets-table');
+  if(rows.length===0){ el.innerHTML='<div class="empty-note">No tickets here.</div>'; return; }
+  el.innerHTML = `<table class="data-table"><thead><tr><th>Subject</th><th>Operational POC (KAM)</th><th>Escalation POC</th><th>Status</th><th></th></tr></thead><tbody>
+    ${rows.map(t=>`<tr><td>${esc(t.subject)}</td><td>${esc(t.kam)}</td><td>${esc(t.esc)}</td><td>${badge(t.status)}</td>
+      <td>${t.status==='open' ? `<button class="link-btn" onclick="toggleTicket('${t.id}')">Close ticket</button>` : `<button class="link-btn" onclick="toggleTicket('${t.id}')">Reopen</button>`}</td></tr>`).join('')}
+  </tbody></table>`;
+}
+function toggleTicket(id){ const t=tickets.find(x=>x.id===id); if(!t) return; t.status = t.status==='open' ? 'closed' : 'open'; renderTicketsTable(); updateSidebarCounts(); }
+
+/* ================= HEADCOUNT ================= */
+function renderHeadcountTable(){
+  const el = document.getElementById('headcount-table');
+  el.innerHTML = `<table class="data-table"><thead><tr><th>Name</th><th>Salary</th><th>Insurance</th><th>Iqama expiry</th><th>Status</th></tr></thead><tbody>
+    ${employees.map(e=>`<tr class="clickable" onclick="openEmployee('${e.id}')">
+      <td>${esc(e.name)}</td><td>${esc(e.salary)}</td><td>${esc(e.insurance)}</td><td>${esc(e.iqamaExpiry)}</td><td>${badge(e.status)}</td>
+    </tr>`).join('')}
+  </tbody></table>`;
+}
+function openEmployee(id){
+  const e = employees.find(x=>x.id===id); if(!e) return;
+  document.getElementById('modal-content').innerHTML = `
+    <div class="modal-head"><h2>${esc(e.name)}</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="detail-grid">
+      <div class="detail-item"><div class="k">Employee ID</div><div class="v">${esc(e.id)}</div></div>
+      <div class="detail-item"><div class="k">Status</div><div class="v">${badge(e.status)}</div></div>
+      <div class="detail-item"><div class="k">Salary</div><div class="v">${esc(e.salary)}</div></div>
+      <div class="detail-item"><div class="k">Insurance type</div><div class="v">${esc(e.insurance)}</div></div>
+      <div class="detail-item"><div class="k">Iqama expiry</div><div class="v">${esc(e.iqamaExpiry)}</div></div>
+      <div class="detail-item"><div class="k">Probation ends</div><div class="v">${esc(e.probationEnd)}</div></div>
+      <div class="detail-item"><div class="k">Contract ends</div><div class="v">${esc(e.contractEnd)}</div></div>
+      <div class="detail-item"><div class="k">Annual leave balance</div><div class="v">${e.leaveBalance} days</div></div>
+    </div>
+  `;
+  document.getElementById('overlay').style.display='flex';
+}
+
+/* ================= EXIT / RE-ENTRY ================= */
+function submitExitReentry(){
+  const employee = document.getElementById('er-name').value.trim();
+  const type = document.getElementById('er-type').value;
+  const expiry = document.getElementById('er-expiry').value;
+  const note = document.getElementById('er-note');
+  if(!employee || !expiry){ note.textContent='Enter employee name and expiry date.'; note.className='form-note error'; note.style.display='block'; return; }
+  exitReentry.push({ id: nextId('ER-'), employee, type, status:'active', expiry });
+  note.textContent='Record added.'; note.className='form-note'; note.style.display='block';
+  document.getElementById('er-name').value=''; document.getElementById('er-expiry').value='';
+  renderExitTable();
+  setTimeout(()=>{ note.style.display='none'; }, 3000);
+}
+function renderExitTable(){
+  const el = document.getElementById('exit-table');
+  el.innerHTML = `<table class="data-table"><thead><tr><th>Employee</th><th>Record type</th><th>Status</th><th>Expiry date</th><th></th></tr></thead><tbody>
+    ${exitReentry.map(r=>`<tr><td>${esc(r.employee)}</td><td>${esc(r.type)}</td><td>${badge(r.status)}</td><td>${esc(r.expiry)}</td>
+      <td><button class="link-btn" onclick="toggleExit('${r.id}')">${r.status==='active' ? 'Mark inactive' : 'Mark active'}</button></td></tr>`).join('')}
+  </tbody></table>`;
+}
+function toggleExit(id){ const r=exitReentry.find(x=>x.id===id); if(!r) return; r.status = r.status==='active' ? 'inactive' : 'active'; renderExitTable(); }
+
+/* ================= HR LETTERS ================= */
+function submitLetter(){
+  const employee = document.getElementById('hl-name').value.trim();
+  const type = document.getElementById('hl-type').value;
+  const note = document.getElementById('hl-note');
+  if(!employee){ note.textContent='Enter the employee name.'; note.className='form-note error'; note.style.display='block'; return; }
+  hrLetters.push({ id: nextId('HL-'), employee, type, status:'pending' });
+  note.textContent='Letter requested.'; note.className='form-note'; note.style.display='block';
+  document.getElementById('hl-name').value='';
+  renderLettersTable();
+  setTimeout(()=>{ note.style.display='none'; }, 3000);
+}
+function renderLettersTable(){
+  const el = document.getElementById('letters-table');
+  el.innerHTML = `<table class="data-table"><thead><tr><th>Employee</th><th>Letter type</th><th>Status</th><th></th></tr></thead><tbody>
+    ${hrLetters.map(l=>`<tr><td>${esc(l.employee)}</td><td>${esc(l.type)}</td><td>${badge(l.status)}</td>
+      <td>${l.status==='pending'
+        ? `<button class="link-btn" onclick="issueLetter('${l.id}')">Mark issued</button>`
+        : `<button class="link-btn" onclick="downloadText('${esc(l.type)}_${esc(l.employee)}.txt', 'Letter type: ${esc(l.type)}\\nEmployee: ${esc(l.employee)}\\nIssued via MAS Client Portal.')">Download</button>`}</td></tr>`).join('')}
+  </tbody></table>`;
+}
+function issueLetter(id){ const l=hrLetters.find(x=>x.id===id); if(!l) return; l.status='issued'; renderLettersTable(); }
+
+/* ================= RENEWALS ================= */
+function renderRenewalsTable(){
+  const el = document.getElementById('renewals-table');
+  el.innerHTML = `<table class="data-table"><thead><tr><th>Employee</th><th>Type</th><th>Due date</th><th>Client decision</th><th></th></tr></thead><tbody>
+    ${renewals.map(r=>`<tr><td>${esc(r.employee)}</td><td>${esc(r.type)}</td><td>${esc(r.due)}</td><td>${badge(r.decision)}</td>
+      <td>${r.decision==='pending'
+        ? `<button class="link-btn" onclick="decideRenewal('${r.id}','accepted')">Accept</button> &nbsp; <button class="link-btn rose" onclick="decideRenewal('${r.id}','rejected')">Reject</button>`
+        : '—'}</td></tr>`).join('')}
+  </tbody></table>`;
+  updateSidebarCounts();
+}
+function decideRenewal(id, decision){ const r=renewals.find(x=>x.id===id); if(!r) return; r.decision=decision; renderRenewalsTable(); }
+
+/* ================= ANNUAL LEAVE ================= */
+function renderLeaveTable(){
+  const el = document.getElementById('leave-table');
+  el.innerHTML = `<table class="data-table"><thead><tr><th>Employee</th><th>Days taken</th><th>Days remaining</th></tr></thead><tbody>
+    ${employees.map(e=>`<tr><td>${esc(e.name)}</td><td>${e.leaveTaken}</td><td>${e.leaveBalance}</td></tr>`).join('')}
+  </tbody></table>`;
+}
+
+/* ================= COMMERCIAL DOCS ================= */
+async function submitCommercialDoc(){
+  const type = document.getElementById('cd-type').value;
+  const name = document.getElementById('cd-name').value.trim();
+  const fileInput = document.getElementById('cd-file');
+  const note = document.getElementById('cd-note');
+  if(!name){ note.textContent='Enter a reference name.'; note.className='form-note error'; note.style.display='block'; return; }
+  const file = fileInput.files[0];
+  const fileName = file ? file.name : name + '.pdf';
+  const fileData = file ? await readFileAsDataURL(file) : null;
+  commercialDocs.push({ id: nextId('CD-'), type, name, date: new Date().toISOString().slice(0,10), fileName, fileData });
+  note.textContent='Document uploaded.'; note.className='form-note'; note.style.display='block';
+  document.getElementById('cd-name').value=''; fileInput.value='';
+  renderCommercialTable();
+  setTimeout(()=>{ note.style.display='none'; }, 3000);
+}
+function renderCommercialTable(){
+  const el = document.getElementById('commercial-table');
+  el.innerHTML = `<table class="data-table"><thead><tr><th>Type</th><th>Reference</th><th>Date</th><th></th></tr></thead><tbody>
+    ${commercialDocs.map((d,i)=>`<tr><td>${esc(d.type)}</td><td>${esc(d.name)}</td><td>${esc(d.date)}</td>
+      <td><button class="link-btn" onclick="downloadCommercialDoc(${i})">Download</button></td></tr>`).join('')}
+  </tbody></table>`;
+}
+function downloadCommercialDoc(i){
+  const d = commercialDocs[i];
+  if(d.fileData) downloadDataUrl(d.fileName, d.fileData);
+  else downloadText(d.fileName, `${d.type}\nReference: ${d.name}\nDate: ${d.date}\n\nSimulated document for demo purposes.`);
+}
+
+/* ================= INVOICES / SOA / OVERDUE ================= */
+function renderInvoicesTable(){
+  const el = document.getElementById('invoices-table');
+  el.innerHTML = `<table class="data-table"><thead><tr><th>Invoice</th><th>Date</th><th>Amount</th><th>Status</th><th></th></tr></thead><tbody>
+    ${invoices.map((inv,i)=>`<tr><td>${esc(inv.id)}</td><td>${esc(inv.date)}</td><td>${esc(inv.amount)}</td><td>${badge(inv.status)}</td>
+      <td><button class="link-btn" onclick="downloadInvoice(${i})">Download</button></td></tr>`).join('')}
+  </tbody></table>`;
+}
+function renderOverdueTable(){
+  const el = document.getElementById('overdue-table');
+  const rows = invoices.filter(i=>i.status==='overdue');
+  if(rows.length===0){ el.innerHTML='<div class="empty-note">No overdue invoices.</div>'; return; }
+  el.innerHTML = `<table class="data-table"><thead><tr><th>Invoice</th><th>Date</th><th>Amount</th><th></th></tr></thead><tbody>
+    ${rows.map(inv=>`<tr><td>${esc(inv.id)}</td><td>${esc(inv.date)}</td><td>${esc(inv.amount)}</td>
+      <td><button class="link-btn" onclick="downloadInvoice(${invoices.indexOf(inv)})">Download</button></td></tr>`).join('')}
+  </tbody></table>`;
+}
+function downloadInvoice(i){
+  const inv = invoices[i];
+  downloadText(`${inv.id}.txt`, `Invoice: ${inv.id}\nDate: ${inv.date}\nAmount: ${inv.amount}\nStatus: ${inv.status}\n\nSimulated invoice for demo purposes.`);
+}
+function downloadSOA(){
+  const lines = ['STATEMENT OF ACCOUNT', '=====================', ''];
+  invoices.forEach(inv => lines.push(`${inv.id}  |  ${inv.date}  |  ${inv.amount}  |  ${inv.status.toUpperCase()}`));
+  downloadText('SOA_' + new Date().toISOString().slice(0,10) + '.txt', lines.join('\n'));
+}
+
+/* ================= REPORTS (Excel) ================= */
+function renderReportsTable(){
+  const el = document.getElementById('reports-table');
+  el.innerHTML = `<table class="data-table"><thead><tr><th>Employee</th><th>ERE status</th><th>PP status</th><th>Iqama expiry</th></tr></thead><tbody>
+    ${employees.map(e=>{
+      const er = exitReentry.find(x=>x.employee===e.name);
+      const rn = renewals.find(x=>x.employee===e.name && x.type==='Probation');
+      return `<tr><td>${esc(e.name)}</td><td>${badge(er ? er.status : '—')}</td><td>${badge(rn ? rn.decision : '—')}</td><td>${esc(e.iqamaExpiry)}</td></tr>`;
+    }).join('')}
+  </tbody></table>`;
+}
+function exportReportExcel(){
+  const rows = employees.map(e=>{
+    const er = exitReentry.find(x=>x.employee===e.name);
+    const rn = renewals.find(x=>x.employee===e.name && x.type==='Probation');
+    return {
+      Employee: e.name, 'ERE Status': er ? er.status : '', 'PP Status': rn ? rn.decision : '',
+      'Iqama Expiry': e.iqamaExpiry, Salary: e.salary, 'Insurance Type': e.insurance
+    };
+  });
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Live Tracking');
+  XLSX.writeFile(wb, 'MAS_Client_Report_' + new Date().toISOString().slice(0,10) + '.xlsx');
+}
+
+/* ================= NEWSLETTER ================= */
+function renderNewsletterTable(){
+  const el = document.getElementById('newsletter-table');
+  el.innerHTML = `<table class="data-table"><thead><tr><th>Title</th><th>Date</th><th></th></tr></thead><tbody>
+    ${newsletters.map(n=>`<tr><td>${esc(n.title)}</td><td>${esc(n.date)}</td>
+      <td><button class="link-btn" onclick="downloadText('${esc(n.title)}.txt', '${esc(n.title)}\\nPublished: ${n.date}\\n\\nSimulated newsletter content for demo purposes.')">Download</button></td></tr>`).join('')}
+  </tbody></table>`;
+}
+
+/* ================= SUGGESTIONS ================= */
+function submitSuggestion(){
+  const text = document.getElementById('sg-text').value.trim();
+  const note = document.getElementById('sg-note');
+  if(!text){ note.textContent='Write a suggestion before submitting.'; note.className='form-note error'; note.style.display='block'; return; }
+  suggestions.unshift({ id: nextId('SG-'), text, date: new Date().toISOString().slice(0,10) });
+  note.textContent='Thanks — your suggestion has been submitted.'; note.className='form-note'; note.style.display='block';
+  document.getElementById('sg-text').value='';
+  renderSuggestionsList();
+  setTimeout(()=>{ note.style.display='none'; }, 3000);
+}
+function renderSuggestionsList(){
+  const el = document.getElementById('suggestions-list');
+  if(suggestions.length===0){ el.innerHTML='<div class="empty-note">No suggestions submitted yet.</div>'; return; }
+  el.innerHTML = suggestions.map(s=>`
+    <div class="action-item" style="cursor:default;border-left-color:var(--teal);">
+      <div><div class="action-text">${esc(s.text)}</div><div class="action-sub">${esc(s.date)}</div></div>
+    </div>`).join('');
+}
+</script>
+</body>
+</html>
